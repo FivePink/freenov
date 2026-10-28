@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FreeNov 阅读</title>
+<style>
+  body { max-width: 720px; margin: 0 auto; padding: 24px 16px 64px;
+         font: 19px/1.9 "PingFang SC", "Noto Sans CJK SC", "Microsoft YaHei", serif;
+         color: #222; background: #faf8f4; }
+  h1 { font-size: 24px; margin: 0 0 4px; }
+  h3 { margin: 28px 0 12px; font-size: 20px; }
+  p { text-indent: 2em; margin: 0 0 12px; }
+  .nav { display: flex; gap: 12px; margin: 32px 0 8px; }
+  .nav a, .nav span { padding: 8px 18px; border-radius: 8px; background: #efe9dd;
+         color: #333; text-decoration: none; font-size: 16px; }
+  .nav a:active { background: #ddd3bf; }
+  .nav .dim { opacity: .45; }
+  .list { margin-top: 16px; border-top: 1px solid #e4dccb; padding-top: 8px; }
+  .list a { display: inline-block; margin: 2px 0; padding: 4px 8px; color: #555;
+         text-decoration: none; font-size: 15px; border-radius: 6px; }
+  .list a.on { background: #efe9dd; color: #222; }
+  .tip { margin-top: 24px; color: #999; font-size: 14px; line-height: 1.8; }
+  footer { margin-top: 48px; color: #999; font-size: 13px; text-align: center; }
+  .missing { margin: 60px 0; text-align: center; color: #888; font-size: 16px; }
+</style>
+</head>
+<body>
+<h1 id="bookName">…</h1>
+<div id="body"><div class="missing">加载中…</div></div>
+<footer>FreeNov · 个人阅读测试 · 版权内容请通过正版渠道阅读</footer>
+<script>
+var DATA = null, BOOKID = null, NUM = null;
+function parseHash() {
+  var m = location.hash.match(/^#\/r\/([^/]+)\/(\d+)$/);
+  return m ? { book: decodeURIComponent(m[1]), num: parseInt(m[2], 10) } : null;
+}
+function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function(c){
+  return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
+function render() {
+  var h = parseHash();
+  if (!h) { document.getElementById("body").innerHTML =
+    '<div class="missing">未指定章节，链接应为 …/#/r/&lt;书ID&gt;/&lt;章号&gt;</div>'; return; }
+  BOOKID = h.book; NUM = h.num;
+  var book = DATA && DATA.books && DATA.books[BOOKID];
+  if (!book) { document.getElementById("bookName").textContent = "未收录";
+    document.getElementById("body").innerHTML =
+      '<div class="missing">这本书还没收录。对豆包说：看「书名」</div>'; return; }
+  document.getElementById("bookName").textContent = book.name;
+  var ch = book.chapters && book.chapters[String(NUM)];
+  var nav = '';
+  var prev = book.seq && book.seq[String(NUM)] ? book.seq[String(NUM)].prev : null;
+  var next = book.seq && book.seq[String(NUM)] ? book.seq[String(NUM)].next : null;
+  var hasPrev = prev != null && book.chapters[String(prev)];
+  var hasNext = next != null && book.chapters[String(next)];
+  nav += '<div class="nav">' +
+    (hasPrev ? '<a href="#/r/' + esc(BOOKID) + '/' + prev + '">上一章</a>'
+             : '<span class="dim">上一章</span>') +
+    (hasNext ? '<a href="#/r/' + esc(BOOKID) + '/' + next + '">下一章</a>'
+             : '<span class="dim">下一章</span>') + '</div>';
+  var list = '';
+  if (book.seq) {
+    list = '<div class="list">';
+    Object.keys(book.seq).forEach(function(k){
+      if (book.chapters[k]) {
+        var on = String(k) === String(NUM) ? ' class="on"' : '';
+        list += '<a' + on + ' href="#/r/' + esc(BOOKID) + '/' + k + '">'
+              + esc(book.chapters[k].name) + '</a>\n';
+      }
+    });
+    list += '</div>';
+  }
+  if (!ch) {
+    document.getElementById("body").innerHTML =
+      '<div class="missing">本章未收录。对豆包说：看「' + esc(book.name) +
+      '」第' + NUM + '章</div>' + nav + list;
+    return;
+  }
+  var paras = String(ch.text || "").split("\n").map(function(p){ return p.trim(); })
+              .filter(function(p){ return p; })
+              .map(function(p){ return "<p>" + esc(p) + "</p>"; }).join("");
+  document.getElementById("body").innerHTML =
+    '<h3>' + esc(ch.name) + '</h3>' + paras + nav + list;
+}
+fetch("data.json").then(function(r){ return r.json(); })
+  .then(function(d){ DATA = d; render(); })
+  .catch(function(){ DATA = { books: {} }; render(); });
+window.addEventListener("hashchange", render);
+</script>
+</body>
+</html>
