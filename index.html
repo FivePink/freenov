@@ -81,7 +81,7 @@ function render() {
   document.getElementById("body").innerHTML =
     '<h3>' + esc(ch.name) + '</h3>' + paras + nav + list;
 }
-fetch("data.json").then(function(r){ return r.json(); })
+fetch("data.json?v=" + Date.now()).then(function(r){ return r.json(); })
   .then(function(d){ DATA = d; render(); })
   .catch(function(){ DATA = { books: {} }; render(); });
 window.addEventListener("hashchange", render);
